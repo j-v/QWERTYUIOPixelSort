@@ -1,4 +1,5 @@
 import controlP5.*;
+import java.nio.file.*;
 ControlP5 cp5;
 
 // UI variables
@@ -43,7 +44,9 @@ void loadSourceImage(String filePath)
 {
   //srcImg = loadImage(imgFileName+"."+fileType); 
   srcImg = loadImage(filePath);
-  imgFileName = filePath.substring(0, filePath.lastIndexOf("."));
+  Path p = Paths.get(filePath);
+  String fileName = p.getFileName().toString();
+  imgFileName = fileName.substring(0, fileName.lastIndexOf("."));
   if (rotateSource)
   {
     srcImg = getRotatedImage(srcImg, true);
@@ -203,6 +206,7 @@ void saveSequence(float thresholdStart, float thresholdEnd, int numFrames)
     brightnessThreshold = thresholdStart + delta * (float)i;
     renderImage();
     String outFile = getOutputFileName(i);
+    println(outFile);
     img.save(outFile);
     println("Saved " + outFile);
   }
