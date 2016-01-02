@@ -371,7 +371,7 @@ int getFirstDarkX(int _x, int _y) {
   int y = _y;
   while(brightness(img.pixels[x + y * img.width]) > brightnessThreshold) {
     x++;
-    if(x >= width) return -1;
+    if(x >= img.width) return -1;
   }
   return x;
 }
@@ -381,7 +381,7 @@ int getNextBrightX(int _x, int _y) {
   int y = _y;
   while(brightness(img.pixels[x + y * img.width]) < brightnessThreshold) {
     x++;
-    if(x >= width) return width-1;
+    if(x >= img.width) return img.width-1;
   }
   return x-1;
 }
@@ -392,7 +392,7 @@ int getFirstDarkY(int _x, int _y) {
   if(y < img.height) {
     while(brightness(img.pixels[x + y * img.width]) > brightnessThreshold) {
       y++;
-      if(y >= height) return -1;
+      if(y >= img.height) return -1;
     }
   }
   return y;
@@ -404,7 +404,7 @@ int getNextBrightY(int _x, int _y) {
   if(y < img.height) {
     while(brightness(img.pixels[x + y * img.width]) < brightnessThreshold) {
       y++;
-      if(y >= height) return height-1;
+      if(y >= img.height) return img.height-1;
     }
   }
   return y-1;
