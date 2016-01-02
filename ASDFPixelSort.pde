@@ -1,31 +1,30 @@
-int mode = 1;
+import controlP5.*;
+ControlP5 cp5;
+
+// UI variables
+int controlPaneWidth = 500;
+
+int mode = 0;
 
 //MODE:
-//0 -> black
-//1 -> bright
-//2 -> white
-//b(16777216)
+//0 -> brighter
+//1 -> darker
 
 PImage srcImg;
 PImage img;
-String imgFileName = "chris-interlaken";
+String imgFileName = "beautiful-lake";
 String fileType = "jpg";
 
-int maxDimension = 700; // Max width or height, to resize source image
-boolean rotateSource = true;
+int maxDimension = 1600; // Max width or height, to resize source image
+boolean rotateSource = false;
 
-boolean loopable = true; // make a loopable video. doubles number of frames
-int minThreshold = 40;
-int maxThreshold = 200;
-int numFrames = 25;
-boolean decrementThreshold = true; //starts from maxThreshold descending to minThreshold instead of vice versa
+float startThreshold = 255;
+float endThreshold = 0;
+int numFrames = 1;
 
 boolean columnsFirst = true;
 
-int threshold = 0;
-int blackValue = -10000000;
-int brightnessValue = 60;
-int whiteValue = -6000000;
+float brightnessThreshold = 0;
 
 int row = 0;
 int column = 0;
@@ -33,14 +32,24 @@ int column = 0;
 boolean saved = false;
 
 void setup() {
-  srcImg = loadImage(imgFileName+"."+fileType); 
+  size(400, 400);
+  initControls();
+  
+  loadSourceImage(imgFileName+"."+fileType);
+  renderImage();
+}
+
+void loadSourceImage(String filePath)
+{
+  //srcImg = loadImage(imgFileName+"."+fileType); 
+  srcImg = loadImage(filePath);
+  imgFileName = filePath.substring(0, filePath.lastIndexOf("."));
   if (rotateSource)
   {
     srcImg = getRotatedImage(srcImg, true);
   }
   
   // Resize if necessary
-  boolean widthGreatest = srcImg.width > srcImg.height;
   int maxDim = max(srcImg.width, srcImg.height);
   if (maxDim > maxDimension)
   {
@@ -49,9 +58,95 @@ void setup() {
     srcImg.resize((int)(ratio * srcImg.width), (int)(ratio * srcImg.height));
   }
   
-  size(srcImg.width, srcImg.height);
-  image(srcImg, 0, 0); // TODO necessary?
+  surface.setResizable(true);
+  surface.setSize(srcImg.width + controlPaneWidth, srcImg.height);
+  
   img = createImage(srcImg.width, srcImg.height, RGB);
+}
+
+void initControls()
+{
+  cp5 = new ControlP5(this);
+    
+  cp5.addButton("openFile")
+    .setPosition(0, 0);
+  cp5.addSlider("thresholdChanged")
+    .setPosition(0, 40)
+    .setRange(0, 255)
+    .setTriggerEvent(Slider.RELEASE)
+    .setCaptionLabel("Threshold")
+    .setSize(400,20)
+    .setValue(brightnessThreshold);  
+  cp5.addToggle("modeChanged")
+    .setPosition(0, 70)
+    .setSize(50, 20)
+    .setCaptionLabel("Mode")
+    .setValue(mode == 1);    
+  cp5.addToggle("sortOrderChanged")
+    .setPosition(70, 70)
+    .setSize(50,20)
+    .setCaptionLabel("Sort Order")
+    .setValue(columnsFirst);
+    
+  cp5.addTextlabel("sequenceLabel")
+    .setText("Sequence controls")
+    .setPosition(0, 120);
+  cp5.addSlider("startThreshold")
+    .setPosition(0, 140)
+    .setRange(0, 255)
+    .setSize(400,20)
+    .setValue(startThreshold);  
+  cp5.addSlider("endThreshold")
+    .setPosition(0, 170)
+    .setRange(0, 255)
+    .setSize(400,20)
+    .setValue(endThreshold);  
+  cp5.addTextfield("numFramesText")
+    .setPosition(0, 200)
+    .setSize(200, 40)
+    .setInputFilter(ControlP5.INTEGER)
+    .setCaptionLabel("number of frames")
+    .setText(Integer.toString(numFrames))
+    .setAutoClear(false);
+  cp5.addBang("saveSequencePressed")
+    .setPosition(0, 260)
+    .setSize(40,40)
+    .setCaptionLabel("Save Sequence");
+}
+
+void thresholdChanged(float theValue)
+{
+  brightnessThreshold = theValue;
+  renderImage();
+}
+
+void modeChanged(boolean theValue)
+{
+  mode = theValue ? 1 : 0; 
+  renderImage();
+}
+
+void sortOrderChanged(boolean theValue)
+{
+  columnsFirst = theValue;
+  renderImage();
+}
+
+void openFile(int theValue)
+{
+  selectInput("Select an image", "fileSelected");
+}
+
+void fileSelected(File file)
+{
+  loadSourceImage(file.getPath());
+  renderImage();
+}
+
+void saveSequencePressed()
+{
+  numFrames = Integer.parseInt(cp5.get(Textfield.class,"numFramesText").getText());
+  saveSequence(startThreshold, endThreshold, numFrames);
 }
 
 PImage getRotatedImage(PImage image, boolean counterClockwise)
@@ -78,38 +173,16 @@ PImage getRotatedImage(PImage image, boolean counterClockwise)
 }
 
 void draw() {
-  
-  int actualFrame = frameCount;
-  // Render loop
-  if (!loopable) {
-    if (frameCount > numFrames) { System.exit(0); }
-  }
-  else
-  {
-    if (frameCount > numFrames)
-    {
-      actualFrame = numFrames - (frameCount - numFrames);
-      if (actualFrame < 1) { System.exit(0); }      
-    }
-  }
-  // TODO allow exponential curve
-  // TODO factor out into delta and increment/decrement
-  if (decrementThreshold)
-  {
-    brightnessValue = (int)((float)minThreshold + ((float)(maxThreshold - minThreshold + 1) / (float)(numFrames)) * (float)(numFrames - (actualFrame-1))); // TODO only works for brightness mode
-  }
-  else
-  {
-    brightnessValue = (int)((float)minThreshold + ((float)(maxThreshold - minThreshold + 1) / (float)(numFrames)) * (float)(actualFrame-1)); // TODO only works for brightness mode
-  } 
-  println(brightnessValue);
-  
+  background(0);
+  image(img, controlPaneWidth, 0);
+}
+
+void renderImage()
+{ 
   img.copy(srcImg, 0, 0, srcImg.width, srcImg.height, 0, 0, srcImg.width, srcImg.height);
-  
   // TODO make these vars not global
   row = 0;
   column = 0;
-  
   if (columnsFirst)
   {
     drawColumns();
@@ -120,49 +193,36 @@ void draw() {
     drawRows();
     drawColumns();
   }
-  String outFile = getOutputFileName();
-  
-  image(img,0,0);
-  saveFrame(outFile); // TODO could use img.save() instead https://processing.org/reference/PImage_save_.html
-  println("Saved " + outFile);
-  
-//  if(!saved && frameCount >= loops) {
-//    saveFrame(outFile);
-//    saved = true;
-//    println("DONE"+frameCount);
-//    println("Saved " + outFile);
-//    System.exit(0); 
-//  }
 }
 
-String getOutputFileName() {
-  switch(mode) {
-      case 0:
-        threshold = blackValue;
-        break;
-      case 1:
-        threshold = brightnessValue;
-        break;
-      case 2:
-        threshold = whiteValue;
-        break;
-      default:
-        break;
-    }
+void saveSequence(float thresholdStart, float thresholdEnd, int numFrames)
+{
+  float delta = (thresholdEnd - thresholdStart) / (float)(numFrames - 1);
+  for (int i = 0; i < numFrames; i++)
+  {
+    brightnessThreshold = thresholdStart + delta * (float)i;
+    renderImage();
+    String outFile = getOutputFileName(i);
+    img.save(outFile);
+    println("Saved " + outFile);
+  }
+}
+
+String getOutputFileName(int frameNum) {
   String outputDir = "output";
   String outputFileExt = "png";
-  return String.format("%s/%s/%03d_%s_m%d_t%d.%s",
+  return String.format("%s/%s/%03d_%s_m%d_t%.2f.%s",
    outputDir, 
    imgFileName, 
-   frameCount,
+   frameNum,
    imgFileName, 
-   mode, 
-   threshold, 
+   mode,
+   brightnessThreshold, 
    outputFileExt);
 }
 
 void drawColumns() {
-  while(column < width-1) {
+  while(column < img.width-1) {
     img.loadPixels(); 
     sortColumn();
     column++;
@@ -171,7 +231,7 @@ void drawColumns() {
 }
 
 void drawRows() {
-  while(row < height-1) {
+  while(row < img.height-1) {
     img.loadPixels(); 
     sortRow();
     row++;
@@ -184,19 +244,15 @@ void sortRow() {
   int y = row;
   int xend = 0;
   
-  while(xend < width-1) {
+  while(xend < img.width-1) {
     switch(mode) {
       case 0:
-        x = getFirstNotBlackX(x, y);
-        xend = getNextBlackX(x, y);
-        break;
-      case 1:
         x = getFirstBrightX(x, y);
         xend = getNextDarkX(x, y);
         break;
-      case 2:
-        x = getFirstNotWhiteX(x, y);
-        xend = getNextWhiteX(x, y);
+      case 1:
+        x = getFirstDarkX(x, y);
+        xend = getNextBrightX(x, y);
         break;
       default:
         break;
@@ -229,19 +285,15 @@ void sortColumn() {
   int y = 0;
   int yend = 0;
   
-  while(yend < height-1) {
+  while(yend < img.height-1) {
     switch(mode) {
       case 0:
-        y = getFirstNotBlackY(x, y);
-        yend = getNextBlackY(x, y);
-        break;
-      case 1:
         y = getFirstBrightY(x, y);
         yend = getNextDarkY(x, y);
         break;
-      case 2:
-        y = getFirstNotWhiteY(x, y);
-        yend = getNextWhiteY(x, y);
+      case 1:
+        y = getFirstDarkY(x, y);
+        yend = getNextBrightY(x, y);
         break;
       default:
         break;
@@ -268,38 +320,13 @@ void sortColumn() {
   }
 }
 
-//BLACK
-// TODO a lot of duplicattion in all the getFirst* and getNext* functions
-int getFirstNotBlackX(int _x, int _y) {
-  int x = _x;
-  int y = _y;
-  color c;
-  while((c = img.pixels[x + y * img.width]) < blackValue) {
-    x++;
-    if(x >= width) return -1;
-  }
-  return x;
-}
-
-int getNextBlackX(int _x, int _y) {
-  int x = _x+1;
-  int y = _y;
-  color c;
-  while((c = img.pixels[x + y * img.width]) > blackValue) {
-    x++;
-    if(x >= width) return width-1;
-  }
-  return x-1;
-}
-
-//BRIGHTNESS
+//BRIGHTNESS Mode 0
 int getFirstBrightX(int _x, int _y) {
   int x = _x;
   int y = _y;
-  color c;
-  while(brightness(c = img.pixels[x + y * img.width]) < brightnessValue) {
+  while(brightness(img.pixels[x + y * img.width]) < brightnessThreshold) {
     x++;
-    if(x >= width) return -1;
+    if(x >= img.width) return -1;
   }
   return x;
 }
@@ -307,74 +334,20 @@ int getFirstBrightX(int _x, int _y) {
 int getNextDarkX(int _x, int _y) {
   int x = _x+1;
   int y = _y;
-  color c;
-  while(brightness(c = img.pixels[x + y * img.width]) > brightnessValue) {
+  while(brightness(img.pixels[x + y * img.width]) > brightnessThreshold) {
     x++;
-    if(x >= width) return width-1;
+    if(x >= img.width) return img.width-1;
   }
   return x-1;
 }
 
-//WHITE
-int getFirstNotWhiteX(int _x, int _y) {
-  int x = _x;
-  int y = _y;
-  color c;
-  while((c = img.pixels[x + y * img.width]) > whiteValue) {
-    x++;
-    if(x >= width) return -1;
-  }
-  return x;
-}
-
-int getNextWhiteX(int _x, int _y) {
-  int x = _x+1;
-  int y = _y;
-  color c;
-  while((c = img.pixels[x + y * img.width]) < whiteValue) {
-    x++;
-    if(x >= width) return width-1;
-  }
-  return x-1;
-}
-
-
-//BLACK
-int getFirstNotBlackY(int _x, int _y) {
-  int x = _x;
-  int y = _y;
-  color c;
-  if(y < height) {
-    while((c = img.pixels[x + y * img.width]) < blackValue) {
-      y++;
-      if(y >= height) return -1;
-    }
-  }
-  return y;
-}
-
-int getNextBlackY(int _x, int _y) {
-  int x = _x;
-  int y = _y+1;
-  color c;
-  if(y < height) {
-    while((c = img.pixels[x + y * img.width]) > blackValue) {
-      y++;
-      if(y >= height) return height-1;
-    }
-  }
-  return y-1;
-}
-
-//BRIGHTNESS
 int getFirstBrightY(int _x, int _y) {
   int x = _x;
   int y = _y;
-  color c;
-  if(y < height) {
-    while(brightness(c = img.pixels[x + y * img.width]) < brightnessValue) {
+  if(y < img.height) {
+    while(brightness(img.pixels[x + y * img.width]) < brightnessThreshold) {
       y++;
-      if(y >= height) return -1;
+      if(y >= img.height) return -1;
     }
   }
   return y;
@@ -383,23 +356,41 @@ int getFirstBrightY(int _x, int _y) {
 int getNextDarkY(int _x, int _y) {
   int x = _x;
   int y = _y+1;
-  color c;
-  if(y < height) {
-    while(brightness(c = img.pixels[x + y * img.width]) > brightnessValue) {
+  if(y < img.height) {
+    while(brightness(img.pixels[x + y * img.width]) > brightnessThreshold) {
       y++;
-      if(y >= height) return height-1;
+      if(y >= img.height) return img.height-1;
     }
   }
   return y-1;
 }
 
-//WHITE
-int getFirstNotWhiteY(int _x, int _y) {
+//BRIGHTNESS Mode 1
+int getFirstDarkX(int _x, int _y) {
   int x = _x;
   int y = _y;
-  color c;
-  if(y < height) {
-    while((c = img.pixels[x + y * img.width]) > whiteValue) {
+  while(brightness(img.pixels[x + y * img.width]) > brightnessThreshold) {
+    x++;
+    if(x >= width) return -1;
+  }
+  return x;
+}
+
+int getNextBrightX(int _x, int _y) {
+  int x = _x+1;
+  int y = _y;
+  while(brightness(img.pixels[x + y * img.width]) < brightnessThreshold) {
+    x++;
+    if(x >= width) return width-1;
+  }
+  return x-1;
+}
+
+int getFirstDarkY(int _x, int _y) {
+  int x = _x;
+  int y = _y;
+  if(y < img.height) {
+    while(brightness(img.pixels[x + y * img.width]) > brightnessThreshold) {
       y++;
       if(y >= height) return -1;
     }
@@ -407,12 +398,11 @@ int getFirstNotWhiteY(int _x, int _y) {
   return y;
 }
 
-int getNextWhiteY(int _x, int _y) {
+int getNextBrightY(int _x, int _y) {
   int x = _x;
   int y = _y+1;
-  color c;
-  if(y < height) {
-    while((c = img.pixels[x + y * img.width]) < whiteValue) {
+  if(y < img.height) {
+    while(brightness(img.pixels[x + y * img.width]) < brightnessThreshold) {
       y++;
       if(y >= height) return height-1;
     }
