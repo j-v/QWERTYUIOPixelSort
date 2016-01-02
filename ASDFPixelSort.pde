@@ -6,16 +6,25 @@ int mode = 1;
 //2 -> white
 //b(16777216)
 
+PImage srcImg;
 PImage img;
-String imgFileName = "20151205_181240";
+String imgFileName = "chris-interlaken";
 String fileType = "jpg";
 
-int loops = 1;
+int maxDimension = 700; // Max width or height, to resize source image
+boolean rotateSource = true;
 
-boolean columnsFirst = false;
+boolean loopable = true; // make a loopable video. doubles number of frames
+int minThreshold = 50;
+int maxThreshold = 100;
+int numFrames = 25;
+boolean decrementThreshold = true; //starts from maxThreshold descending to minThreshold instead of vice versa
 
+boolean columnsFirst = true;
+
+int threshold = 0;
 int blackValue = -10000000;
-int brigthnessValue = 120;
+int brightnessValue = 60;
 int whiteValue = -6000000;
 
 int row = 0;
@@ -24,13 +33,83 @@ int column = 0;
 boolean saved = false;
 
 void setup() {
-  img = loadImage(imgFileName+"."+fileType);
-  size(img.width, img.height);
-  image(img, 0, 0);
+  srcImg = loadImage(imgFileName+"."+fileType); 
+  if (rotateSource)
+  {
+    srcImg = getRotatedImage(srcImg, true);
+  }
+  
+  // Resize if necessary
+  boolean widthGreatest = srcImg.width > srcImg.height;
+  int maxDim = max(srcImg.width, srcImg.height);
+  if (maxDim > maxDimension)
+  {
+    // Need to resize
+    float ratio = (float)maxDimension / (float)maxDim;
+    srcImg.resize((int)(ratio * srcImg.width), (int)(ratio * srcImg.height));
+  }
+  
+  size(srcImg.width, srcImg.height);
+  image(srcImg, 0, 0); // TODO necessary?
+  img = createImage(srcImg.width, srcImg.height, RGB);
 }
 
+PImage getRotatedImage(PImage image, boolean counterClockwise)
+{
+  PImage rotated = createImage(image.height, image.width, RGB);
+  rotated.loadPixels();
+  image.loadPixels();
+  for (int x = 0; x < image.width; x++)
+  {
+    for (int y = 0; y < image.height; y++)
+    {
+      if (counterClockwise)
+      {
+        rotated.pixels[y + x * rotated.width] = image.pixels[(image.width - 1 - x) + (y * image.width)];
+      }
+      else
+      {
+        rotated.pixels[y + x * rotated.width] = image.pixels[x + (image.height - 1 - y) * image.width];
+      }
+    }
+  }
+  rotated.updatePixels();
+  return rotated;
+}
 
 void draw() {
+  
+  int actualFrame = frameCount;
+  // Render loop
+  if (!loopable) {
+    if (frameCount > numFrames) { System.exit(0); }
+  }
+  else
+  {
+    if (frameCount > numFrames)
+    {
+      actualFrame = numFrames - (frameCount - numFrames);
+      if (actualFrame < 1) { System.exit(0); }      
+    }
+  }
+  // TODO allow exponential curve
+  // TODO factor out into delta and increment/decrement
+  if (decrementThreshold)
+  {
+    brightnessValue = (int)((float)minThreshold + ((float)(maxThreshold - minThreshold + 1) / (float)(numFrames)) * (float)(numFrames - (actualFrame-1))); // TODO only works for brightness mode
+  }
+  else
+  {
+    brightnessValue = (int)((float)minThreshold + ((float)(maxThreshold - minThreshold + 1) / (float)(numFrames)) * (float)(actualFrame-1)); // TODO only works for brightness mode
+  } 
+  println(brightnessValue);
+  
+  img.copy(srcImg, 0, 0, srcImg.width, srcImg.height, 0, 0, srcImg.width, srcImg.height);
+  
+  // TODO make these vars not global
+  row = 0;
+  column = 0;
+  
   if (columnsFirst)
   {
     drawColumns();
@@ -41,16 +120,45 @@ void draw() {
     drawRows();
     drawColumns();
   }
-  String outFile = "output/" + imgFileName+"_"+mode+".png";
+  String outFile = getOutputFileName();
   
   image(img,0,0);
-  if(!saved && frameCount >= loops) {
-    saveFrame(outFile);
-    saved = true;
-    println("DONE"+frameCount);
-    println("Saved " + outFile);
-    System.exit(0);
-  }
+  saveFrame(outFile); // TODO could use img.save() instead https://processing.org/reference/PImage_save_.html
+  println("Saved " + outFile);
+  
+//  if(!saved && frameCount >= loops) {
+//    saveFrame(outFile);
+//    saved = true;
+//    println("DONE"+frameCount);
+//    println("Saved " + outFile);
+//    System.exit(0); 
+//  }
+}
+
+String getOutputFileName() {
+  switch(mode) {
+      case 0:
+        threshold = blackValue;
+        break;
+      case 1:
+        threshold = brightnessValue;
+        break;
+      case 2:
+        threshold = whiteValue;
+        break;
+      default:
+        break;
+    }
+  String outputDir = "output";
+  String outputFileExt = "png";
+  return String.format("%s/%s/%03d_%s_m%d_t%d.%s",
+   outputDir, 
+   imgFileName, 
+   frameCount,
+   imgFileName, 
+   mode, 
+   threshold, 
+   outputFileExt);
 }
 
 void drawColumns() {
@@ -159,25 +267,6 @@ void sortColumn() {
     y = yend+1;
   }
 }
-//
-//int getFirstY(int x, int y, int threshold) {
-//  color c;
-//  while((c = img.pixels[x + y * img.width]) < threshold) { // TODO need to generalize here
-//    x++;
-//    if(x >= width) return -1;
-//  }
-//  return x;
-//}
-//
-//int getNextX(int x, int y, int threshold) {
-//  x++;
-//  while((c = img.pixels[x + y * img.width]) > threshold) {
-//    x++;
-//    if(x >= width) return width-1;
-//  }
-//  return x-1;
-//}
-
 
 //BLACK
 // TODO a lot of duplicattion in all the getFirst* and getNext* functions
@@ -208,7 +297,7 @@ int getFirstBrightX(int _x, int _y) {
   int x = _x;
   int y = _y;
   color c;
-  while(brightness(c = img.pixels[x + y * img.width]) < brigthnessValue) {
+  while(brightness(c = img.pixels[x + y * img.width]) < brightnessValue) {
     x++;
     if(x >= width) return -1;
   }
@@ -219,7 +308,7 @@ int getNextDarkX(int _x, int _y) {
   int x = _x+1;
   int y = _y;
   color c;
-  while(brightness(c = img.pixels[x + y * img.width]) > brigthnessValue) {
+  while(brightness(c = img.pixels[x + y * img.width]) > brightnessValue) {
     x++;
     if(x >= width) return width-1;
   }
@@ -283,7 +372,7 @@ int getFirstBrightY(int _x, int _y) {
   int y = _y;
   color c;
   if(y < height) {
-    while(brightness(c = img.pixels[x + y * img.width]) < brigthnessValue) {
+    while(brightness(c = img.pixels[x + y * img.width]) < brightnessValue) {
       y++;
       if(y >= height) return -1;
     }
@@ -296,7 +385,7 @@ int getNextDarkY(int _x, int _y) {
   int y = _y+1;
   color c;
   if(y < height) {
-    while(brightness(c = img.pixels[x + y * img.width]) > brigthnessValue) {
+    while(brightness(c = img.pixels[x + y * img.width]) > brightnessValue) {
       y++;
       if(y >= height) return height-1;
     }
