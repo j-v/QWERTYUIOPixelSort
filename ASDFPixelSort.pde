@@ -15,8 +15,8 @@ int maxDimension = 700; // Max width or height, to resize source image
 boolean rotateSource = true;
 
 boolean loopable = true; // make a loopable video. doubles number of frames
-int minThreshold = 50;
-int maxThreshold = 100;
+int minThreshold = 40;
+int maxThreshold = 200;
 int numFrames = 25;
 boolean decrementThreshold = true; //starts from maxThreshold descending to minThreshold instead of vice versa
 
@@ -65,11 +65,11 @@ PImage getRotatedImage(PImage image, boolean counterClockwise)
     {
       if (counterClockwise)
       {
-        rotated.pixels[y + x * rotated.width] = image.pixels[(image.width - 1 - x) + (y * image.width)];
+        rotated.pixels[y + x * rotated.width] = image.pixels[x + (image.height - 1 - y) * image.width];
       }
       else
       {
-        rotated.pixels[y + x * rotated.width] = image.pixels[x + (image.height - 1 - y) * image.width];
+        rotated.pixels[y + x * rotated.width] = image.pixels[image.width - 1 - x + y * image.width];
       }
     }
   }
