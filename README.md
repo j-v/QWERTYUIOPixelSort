@@ -13,4 +13,4 @@ Compile and run pixel sorting GUI app by loading QWERTYUIOPixelSort in [Processi
 
 You can make gifs using the makegif.py script after generating a sequence from the gui, using the name of the output image folder which is created under the "output" folder.
 
-Syntax: `py makegif.py [FRAME_DELAY]`
+Syntax: `py makegif.py output_folder_name [FRAME_DELAY]`
