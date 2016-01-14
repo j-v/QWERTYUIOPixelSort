@@ -11,10 +11,11 @@ int mode = 0;
 //0 -> brighter
 //1 -> darker
 
-PImage srcImg;
+PImage srcImg = null;
 PImage img;
 String imgFileName = "beautiful-lake";
 String fileType = "jpg";
+String currentFileName = null;
 
 int maxDimension = 1600; // Max width or height, to resize source image
 boolean rotateSource = false;
@@ -42,7 +43,8 @@ void setup() {
 
 void loadSourceImage(String filePath)
 {
-  //srcImg = loadImage(imgFileName+"."+fileType); 
+  cursor(WAIT);
+  
   srcImg = loadImage(filePath);
   Path p = Paths.get(filePath);
   String fileName = p.getFileName().toString();
@@ -58,13 +60,26 @@ void loadSourceImage(String filePath)
   {
     // Need to resize
     float ratio = (float)maxDimension / (float)maxDim;
-    srcImg.resize((int)(ratio * srcImg.width), (int)(ratio * srcImg.height));
+    srcImg.resize(max(1, (int)(ratio * srcImg.width)), max(1, (int)(ratio * srcImg.height)));
   }
   
   surface.setResizable(true);
   surface.setSize(srcImg.width + controlPaneWidth, srcImg.height);
   
   img = createImage(srcImg.width, srcImg.height, RGB);
+  
+  currentFileName = filePath;
+  
+  cursor(ARROW);
+}
+
+void reloadImage()
+{
+  if (currentFileName != null)
+  {
+    loadSourceImage(currentFileName);
+    renderImage();
+  }
 }
 
 void initControls()
@@ -115,24 +130,50 @@ void initControls()
     .setPosition(0, 260)
     .setSize(40,40)
     .setCaptionLabel("Save Sequence");
+    
+  cp5.addSlider("maxDimensionChanged")
+    .setPosition(0, 340)
+    .setRange(1, 3000)
+    .setTriggerEvent(Slider.RELEASE)
+    .setCaptionLabel("Max Dimension")
+    .setSize(400,20)
+    .setValue((float)maxDimension);  
+}
+
+void maxDimensionChanged(float theValue)
+{
+   if (srcImg != null)
+   {
+     maxDimension = (int)theValue;
+     reloadImage();
+   }
 }
 
 void thresholdChanged(float theValue)
 {
-  brightnessThreshold = theValue;
-  renderImage();
+  if (srcImg != null)
+  {
+    brightnessThreshold = theValue;
+    renderImage();
+  }
 }
 
 void modeChanged(boolean theValue)
 {
-  mode = theValue ? 1 : 0; 
-  renderImage();
+  if (srcImg != null)
+  {
+    mode = theValue ? 1 : 0; 
+    renderImage();
+  }
 }
 
 void sortOrderChanged(boolean theValue)
 {
-  columnsFirst = theValue;
-  renderImage();
+  if (srcImg != null)
+  {
+    columnsFirst = theValue;
+    renderImage();
+  }
 }
 
 void openFile(int theValue)
@@ -182,6 +223,8 @@ void draw() {
 
 void renderImage()
 { 
+  cursor(WAIT);
+  
   img.copy(srcImg, 0, 0, srcImg.width, srcImg.height, 0, 0, srcImg.width, srcImg.height);
   // TODO make these vars not global
   row = 0;
@@ -196,10 +239,14 @@ void renderImage()
     drawRows();
     drawColumns();
   }
+  
+  cursor(ARROW);
 }
 
 void saveSequence(float thresholdStart, float thresholdEnd, int numFrames)
 {
+  cursor(WAIT);
+  
   float delta = numFrames > 1 ? (thresholdEnd - thresholdStart) / (float)(numFrames - 1) : 0.0f;
   for (int i = 0; i < numFrames; i++)
   {
@@ -210,6 +257,8 @@ void saveSequence(float thresholdStart, float thresholdEnd, int numFrames)
     img.save(outFile);
     println("Saved " + outFile);
   }
+  
+  cursor(ARROW);
 }
 
 String getOutputFileName(int frameNum) {
