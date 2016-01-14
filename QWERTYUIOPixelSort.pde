@@ -200,7 +200,7 @@ void renderImage()
 
 void saveSequence(float thresholdStart, float thresholdEnd, int numFrames)
 {
-  float delta = (thresholdEnd - thresholdStart) / (float)(numFrames - 1);
+  float delta = numFrames > 1 ? (thresholdEnd - thresholdStart) / (float)(numFrames - 1) : 0.0f;
   for (int i = 0; i < numFrames; i++)
   {
     brightnessThreshold = thresholdStart + delta * (float)i;
@@ -215,12 +215,13 @@ void saveSequence(float thresholdStart, float thresholdEnd, int numFrames)
 String getOutputFileName(int frameNum) {
   String outputDir = "output";
   String outputFileExt = "png";
-  return String.format("%s/%s/%03d_%s_m%d_t%.2f.%s",
+  return String.format("%s/%s/%03d_%s_m%d_%s_t%.2f.%s",
    outputDir, 
    imgFileName, 
    frameNum,
    imgFileName, 
    mode,
+   columnsFirst ? "h" : "v",
    brightnessThreshold, 
    outputFileExt);
 }
