@@ -7,7 +7,11 @@ Based on kimasendorf's [ASDFPixelSort](https://github.com/kimasendorf/ASDFPixelS
 ## Requirements
 - Processing 3
 - [ControlP5 library](http://www.sojamo.de/libraries/controlP5/)
-- For creating gifs: [ImageMagick](http://www.imagemagick.org/script/binary-releases.php) static executables, on the command-line PATH
+For creating gifs: 
+- [ImageMagick](http://www.imagemagick.org/script/binary-releases.php) static executables, on the command-line PATH
+- Python
+
+## Usage 
 
 Compile and run pixel sorting GUI app by loading QWERTYUIOPixelSort in [Processing 3](https://processing.org/download/).
 
