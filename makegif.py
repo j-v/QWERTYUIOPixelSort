@@ -17,8 +17,8 @@ imageName = args.folderName
 
 imagePath = path.join('output', imageName)
 imageFiles = [path.join(imagePath, f) for f in listdir(imagePath) if f.endswith('.png')]
-if reverseIt:
-    imageFiles += reversed(imageFiles)
+if reverseIt and len(imageFiles) > 1 :
+    imageFiles += reversed(imageFiles[1:-1])
 if shuffleIt:
     shuffle(imageFiles)
 

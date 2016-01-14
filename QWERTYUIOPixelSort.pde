@@ -41,17 +41,17 @@ void setup() {
   renderImage();
 }
 
-void loadSourceImage(String filePath)
+void loadSourceImage(String filePath) //<>//
 {
   cursor(WAIT);
   
   srcImg = loadImage(filePath);
-  Path p = Paths.get(filePath);
+  Path p = Paths.get(filePath); //<>//
   String fileName = p.getFileName().toString();
   imgFileName = fileName.substring(0, fileName.lastIndexOf("."));
   if (rotateSource)
   {
-    srcImg = getRotatedImage(srcImg, true);
+    srcImg = getRotatedImage(srcImg, true); //<>//
   }
   
   // Resize if necessary
@@ -252,6 +252,7 @@ void saveSequence(float thresholdStart, float thresholdEnd, int numFrames)
   {
     brightnessThreshold = thresholdStart + delta * (float)i;
     renderImage();
+    cursor(WAIT);
     String outFile = getOutputFileName(i);
     println(outFile);
     img.save(outFile);
